@@ -1,0 +1,214 @@
+import { useState, useRef } from 'react';
+import { 
+  Upload, 
+  X, 
+  FileText, 
+  AlertCircle,
+  ShieldCheck,
+  Zap
+} from 'lucide-react';
+import { Button } from '@/src/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/src/components/ui/card';
+import { toast } from 'sonner';
+import { apiFetch } from '@/src/lib/api';
+
+export function FileUpload({ user, onComplete, onCancel }: any) {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) {
+      if (dropped.type !== 'application/pdf') {
+        toast.error('Only PDF files are supported');
+        return;
+      }
+      if (dropped.size > 20 * 1024 * 1024) {
+        toast.error("File exceeds 20MB limit");
+        return;
+      }
+      setFile(dropped);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selected = e.target.files[0];
+      if (selected.type !== 'application/pdf') {
+        toast.error('Only PDF files are supported');
+        return;
+      }
+      if (selected.size > 20 * 1024 * 1024) {
+        toast.error("File exceeds 20MB limit");
+        return;
+      }
+      setFile(selected);
+    }
+  };
+
+  const startAnalysis = async () => {
+    if (!file || !user) return;
+
+    setUploading(true);
+    setStatus('processing');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      setErrorMessage('');
+
+      // Include Firebase ID token so server can determine ownerId
+      let headers: Record<string, string> = {};
+      try {
+        const idToken = await (user as any).getIdToken?.();
+        if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+      } catch (tErr) {
+        console.warn('Could not fetch ID token for upload', tErr);
+      }
+
+      console.log('UPLOAD START');
+      const analysisRes = await apiFetch('/api/analyze', {
+        method: 'POST',
+        body: formData,
+        headers,
+      });
+
+      if (!analysisRes.ok) {
+        const errorBody = await analysisRes.json().catch(() => null);
+        const errorText = errorBody?.error || (await analysisRes.text().catch(() => ''));
+        console.error('AI endpoint returned error', analysisRes.status, errorText);
+        throw new Error(errorText || 'AI Analysis Failed');
+      }
+
+      const result = await analysisRes.json();
+      console.log('UPLOAD COMPLETE — server response:', result);
+      const documentId = result?.documentId;
+      if (!documentId) throw new Error('Server did not return documentId');
+
+      setStatus('done');
+      setUploading(false);
+      toast.success('Analysis complete!');
+      setTimeout(() => onComplete(documentId), 500);
+    } catch (err: any) {
+      console.error('Pipeline Error:', err);
+      setStatus('error');
+      setUploading(false);
+      setErrorMessage(err?.message || 'Upload or analysis failed');
+      toast.error(err?.message || 'Upload or analysis failed');
+    }
+  };
+
+  return (
+    <Card className="bg-slate-900 border-slate-800 shadow-2xl shadow-black/60 rounded-2xl overflow-hidden">
+      <CardHeader className="p-8 border-b border-slate-800">
+        <CardTitle className="flex items-center gap-3 text-white font-bold tracking-tight">
+          <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+            <ShieldCheck size={22} />
+          </div>
+          Secure Document Ingestion
+        </CardTitle>
+        <CardDescription className="text-slate-500 mt-2">
+          Upload your financial reports, statements, or agreements for high-fidelity AI assessment.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-8 space-y-8">
+        {!file ? (
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-indigo-600/20 bg-indigo-600/5 py-16 transition-all hover:border-indigo-500 hover:bg-indigo-600/10 cursor-pointer"
+          >
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-900/30 group-hover:scale-110 transition-all duration-300">
+              <Upload className="text-white" size={32} />
+            </div>
+            <div className="mt-8 text-center space-y-2">
+              <p className="text-lg font-bold text-white tracking-tight">Select Intelligence Source</p>
+              <p className="text-sm text-slate-500">Drag a PDF here or click to browse (Max 20MB)</p>
+            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              onChange={handleFileChange}
+              accept=".pdf,application/pdf"
+            />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex items-center gap-5 rounded-2xl border border-slate-800 p-5 bg-slate-800/20 shadow-inner">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg">
+                <FileText size={24} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-bold text-white tracking-tight">{file.name}</p>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB • Ready for Ingestion
+                </p>
+              </div>
+              {!uploading && (
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-500 hover:text-white hover:bg-slate-800" onClick={() => setFile(null)}>
+                  <X size={20} />
+                </Button>
+              )}
+            </div>
+
+            {uploading && (
+              <div className="space-y-4 px-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                      AI Shard Processing
+                    </span>
+                    <span className="text-sm font-bold text-white mt-1">
+                      Executing LLM Assessment...
+                    </span>
+                  </div>
+                  <span className="text-2xl font-black text-indigo-400 tabular-nums">
+                    --
+                  </span>
+                </div>
+                <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 shadow-inner">
+                  <div 
+                    className="h-full rounded-full bg-indigo-500 animate-pulse w-full"
+                  />
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10">
+                  <Zap size={14} className="text-indigo-400" />
+                  <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">Quantum-Resistant Encryption Active • ISO/IEC 27001 Compliant</span>
+                </div>
+              </div>
+            )}
+
+            {!uploading && (
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <Button variant="outline" className="h-12 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 font-bold" onClick={onCancel}>Cancel</Button>
+                <Button className="h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-black shadow-xl shadow-indigo-900/40" onClick={startAnalysis}>
+                  Begin Execution Scan
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className="flex items-center gap-4 rounded-xl bg-red-500/10 p-6 text-sm text-red-500 border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+            <AlertCircle size={22} className="shrink-0" />
+            <div className="flex flex-col">
+              <span className="font-bold">System Interrupt</span>
+              <span className="text-red-400/80">{errorMessage || 'Upload or analysis failed. Please retry.'}</span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

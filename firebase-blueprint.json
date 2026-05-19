@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and roles.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "Document": {
+      "title": "Uploaded Document",
+      "description": "Metadata for financial documents uploaded by users.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileSize": { "type": "number" },
+        "fileUrl": { "type": "string" },
+        "storagePath": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "processing", "completed", "failed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "fileName", "fileUrl", "status"]
+    },
+    "Analysis": {
+      "title": "AI Analysis Report",
+      "description": "Detailed AI-generated insights for a document.",
+      "type": "object",
+      "properties": {
+        "documentId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "summary": { "type": "string" },
+        "keyMetrics": { "type": "object" },
+        "riskLevel": { "type": "string", "enum": ["low", "medium", "high"] },
+        "risks": { "type": "array" },
+        "sentimentScore": { "type": "number" },
+        "actionItems": { "type": "array" },
+        "processedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["documentId", "ownerId", "riskLevel"]
+    },
+    "AuditLog": {
+      "title": "System Audit Log",
+      "description": "Compliance logs for all system actions.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "resourceId": { "type": "string" },
+        "resourceType": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/documents/{docId}": {
+      "schema": "Document",
+      "description": "Document metadata"
+    },
+    "/documents/{docId}/analyses/{analysisId}": {
+      "schema": "Analysis",
+      "description": "AI reports linked to documents"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "System-wide activity logs"
+    }
+  }
+}
