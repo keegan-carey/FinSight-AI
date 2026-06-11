@@ -1,6 +1,4 @@
 import express from "express";
-import path from "path";
-import { createServer as createViteServer } from "vite";
 import { InferenceClient } from "@huggingface/inference";
 import multer from "multer";
 import pdfParse from "pdf-parse";
@@ -13,7 +11,7 @@ dotenv.config();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 4 * 1024 * 1024 },
 });
 
 type AnalysisResponse = {
@@ -175,9 +173,8 @@ async function createFirestoreDocumentViaRest(collectionPath: string, data: Reco
   return name.split("/").pop() || "";
 }
 
-async function startServer() {
+export function createApiApp() {
   const app = express();
-  const PORT = 3001;
 
   // Initialize Firebase Admin if credentials are available
   try {
@@ -490,24 +487,22 @@ CRITICAL RULES:
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
+  app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: "PDF exceeds the 4 MB deployment limit" });
+    }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`FinSight AI running on http://localhost:${PORT}`);
+    if (res.headersSent) {
+      return next(error);
+    }
+
+    console.error("UNHANDLED_API_ERROR:", error?.message || error);
+    return res.status(500).json({ error: error?.message || "Unexpected API error" });
   });
+
+  return app;
 }
 
-startServer();
+const app = createApiApp();
+
+export default app;
