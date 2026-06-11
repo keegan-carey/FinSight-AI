@@ -57,3 +57,23 @@ Install dependencies:
 
 ```bash
 npm install
+
+## Docker Setup
+
+Build the image:
+
+```bash
+docker build -t finsight-ai .
+```
+
+Run the container:
+
+```bash
+docker run --env-file .env -p 3001:3001 finsight-ai
+```
+
+The application will be available at:
+
+```text
+http://localhost:3001
+```

@@ -184,7 +184,7 @@ async function createFirestoreDocumentViaRest(collectionPath: string, data: Reco
 
 async function startServer() {
   const app = express();
-  const PORT = 3001;
+  const PORT = Number(process.env.PORT) || 3001;
 
   // Initialize Firebase Admin if credentials are available
   try {
