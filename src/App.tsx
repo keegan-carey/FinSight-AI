@@ -519,7 +519,7 @@ export default function App() {
             <CardContent className="p-10 pt-0 space-y-8">
               <Button 
                 onClick={handleLogin}
-                className="w-full bg-indigo-600 h-14 text-white hover:bg-indigo-700 font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-900/40 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full bg-indigo-500 h-14 text-white hover:bg-indigo-400 active:bg-indigo-600 font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-500/50 rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] border border-indigo-400/40"
               >
                 Authenticate Google ID
               </Button>
@@ -563,7 +563,7 @@ export default function App() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={emailAuthLoading}
-                  className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-600 h-12 rounded-2xl"
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400 h-12 rounded-2xl px-4 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors duration-200"
                 />
                 <Input
                   type="password"
@@ -571,14 +571,14 @@ export default function App() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={emailAuthLoading}
-                  className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-600 h-12 rounded-2xl"
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400 h-12 rounded-2xl px-4 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors duration-200"
                 />
               </div>
 
               <Button 
                 onClick={isSignup ? handleEmailSignup : handleEmailSignin}
                 disabled={emailAuthLoading}
-                className="w-full bg-slate-800 border border-slate-700 h-14 text-slate-300 hover:bg-slate-700 disabled:opacity-50 font-black text-sm uppercase tracking-widest shadow-xl rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full bg-slate-700 border border-slate-500 h-14 text-white hover:bg-slate-600 active:bg-slate-800 disabled:opacity-50 active:bg-slate-800 font-black text-sm uppercase tracking-widest shadow-xl rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
                 {emailAuthLoading ? 'Loading...' : isSignup ? 'Create Account' : 'Sign In'}
               </Button>
@@ -586,7 +586,7 @@ export default function App() {
               <button
                 onClick={() => setIsSignup(!isSignup)}
                 disabled={emailAuthLoading}
-                className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors font-semibold"
+                className="w-full text-xs text-slate-400 hover:text-indigo-400 transition-colors duration-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
               </button>
