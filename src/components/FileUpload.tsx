@@ -12,40 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/src
 import { toast } from 'sonner';
 import { apiFetch } from '@/src/lib/api';
 
-const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
-
-function validatePdf(file: File): string | null {
-  if (file.type !== 'application/pdf') {
-    return 'Only PDF files are supported';
-  }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return 'PDF exceeds the 4 MB deployment limit';
-  }
-  return null;
-}
-
-async function getApiError(response: Response): Promise<string> {
-  const responseText = await response.text().catch(() => '');
-
-  try {
-    const body = JSON.parse(responseText);
-    if (typeof body?.error === 'string' && body.error.trim()) {
-      return body.error;
-    }
-  } catch {
-    // Non-JSON responses are handled below.
-  }
-
-  if (response.status === 404) {
-    return 'Analysis service is unavailable. The API deployment was not found.';
-  }
-  if (response.status === 413) {
-    return 'PDF exceeds the 4 MB deployment limit.';
-  }
-
-  return responseText.trim() || `Analysis request failed (${response.status})`;
-}
-
 export function FileUpload({ user, onComplete, onCancel }: any) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -57,14 +23,15 @@ export function FileUpload({ user, onComplete, onCancel }: any) {
     e.preventDefault();
     const dropped = e.dataTransfer.files?.[0];
     if (dropped) {
-      const validationError = validatePdf(dropped);
-      if (validationError) {
-        toast.error(validationError);
+      if (dropped.type !== 'application/pdf') {
+        toast.error('Only PDF files are supported');
+        return;
+      }
+      if (dropped.size > 20 * 1024 * 1024) {
+        toast.error("File exceeds 20MB limit");
         return;
       }
       setFile(dropped);
-      setStatus('idle');
-      setErrorMessage('');
     }
   };
 
@@ -75,14 +42,15 @@ export function FileUpload({ user, onComplete, onCancel }: any) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
-      const validationError = validatePdf(selected);
-      if (validationError) {
-        toast.error(validationError);
+      if (selected.type !== 'application/pdf') {
+        toast.error('Only PDF files are supported');
+        return;
+      }
+      if (selected.size > 20 * 1024 * 1024) {
+        toast.error("File exceeds 20MB limit");
         return;
       }
       setFile(selected);
-      setStatus('idle');
-      setErrorMessage('');
     }
   };
 
@@ -114,9 +82,10 @@ export function FileUpload({ user, onComplete, onCancel }: any) {
       });
 
       if (!analysisRes.ok) {
-        const errorText = await getApiError(analysisRes);
+        const errorBody = await analysisRes.json().catch(() => null);
+        const errorText = errorBody?.error || (await analysisRes.text().catch(() => ''));
         console.error('AI endpoint returned error', analysisRes.status, errorText);
-        throw new Error(errorText);
+        throw new Error(errorText || 'AI Analysis Failed');
       }
 
       const result = await analysisRes.json();
@@ -163,7 +132,7 @@ export function FileUpload({ user, onComplete, onCancel }: any) {
             </div>
             <div className="mt-8 text-center space-y-2">
               <p className="text-lg font-bold text-white tracking-tight">Select Intelligence Source</p>
-              <p className="text-sm text-slate-500">Drag a PDF here or click to browse (Max 4 MB)</p>
+              <p className="text-sm text-slate-500">Drag a PDF here or click to browse (Max 20MB)</p>
             </div>
             <input 
               type="file" 

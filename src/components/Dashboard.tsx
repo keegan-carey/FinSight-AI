@@ -56,10 +56,7 @@ export function Dashboard({ user, userProfile, onAction, onDocSelect }: any) {
        try {
          const allDocsQuery = query(collection(db, 'documents'), where('ownerId', '==', user.uid));
          const allDocs = await getDocs(allDocsQuery);
-         const data: Array<{ id: string; [key: string]: any }> = allDocs.docs.map(d => ({
-           id: d.id,
-           ...d.data(),
-         }));
+         const data = allDocs.docs.map(d => ({ id: d.id, ...d.data() }));
 
          const getTimestamp = (dateVal: any) => {
            if (!dateVal) return Date.now();
