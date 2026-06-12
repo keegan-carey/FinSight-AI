@@ -101,8 +101,27 @@ export function FileUpload({ user, onComplete, onCancel }: any) {
       console.error('Pipeline Error:', err);
       setStatus('error');
       setUploading(false);
-      setErrorMessage(err?.message || 'Upload or analysis failed');
-      toast.error(err?.message || 'Upload or analysis failed');
+      const msg = err?.message || 'Upload or analysis failed';
+      setErrorMessage(msg);
+      toast.error(msg);
+
+      try {
+        const { getFirestore, collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+        const db = getFirestore();
+        await addDoc(collection(db, 'analyses'), {
+          fileName: file?.name || 'Unknown',
+          fileSize: file?.size || 0,
+          status: 'failed',
+          errorMessage: msg,
+          uploadedAt: serverTimestamp(),
+          failedAt: serverTimestamp(),
+          ownerId: user?.uid || null,
+        });
+        console.log('Failed record persisted to Firestore');
+      } catch (firestoreErr) {
+        console.error('Could not persist failed record:', firestoreErr);
+      }
+    }
     }
   };
 
